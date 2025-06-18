@@ -1,8 +1,10 @@
 const express = require("express");
 const { getGamesByPlayer } = require("./pgnService");
 
+const express = require('express');
 const app = express();
-const PORT = 3000;
+
+const PORT = process.env.PORT || 3000;
 
 app.get("/games", (req, res) => {
   const player = req.query.player;
