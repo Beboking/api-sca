@@ -1,6 +1,18 @@
 const fs = require("fs");
 const parser = require("pgn-parser");
 
+function normalizeName(name) {
+  return name.toLowerCase().replace(",", "").split(" ").filter(Boolean);
+}
+
+function matchesPlayerName(fullName, searchInput) {
+  const fullNameWords = normalizeName(fullName);
+  const searchWords = normalizeName(searchInput);
+
+  // Verifica que todas las palabras de búsqueda estén en el nombre completo
+  return searchWords.every(word => fullNameWords.some(n => n.includes(word)));
+}
+
 function getGamesByPlayer(playerName) {
   const raw = fs.readFileSync("games.pgn", "utf8");
   const parsed = parser.parse(raw);
@@ -9,9 +21,10 @@ function getGamesByPlayer(playerName) {
     const headers = game.headers;
     const white = headers.find(h => h.name === "White")?.value || "";
     const black = headers.find(h => h.name === "Black")?.value || "";
+
     return (
-      white.toLowerCase().includes(playerName.toLowerCase()) ||
-      black.toLowerCase().includes(playerName.toLowerCase())
+      matchesPlayerName(white, playerName) ||
+      matchesPlayerName(black, playerName)
     );
   });
 
@@ -32,6 +45,7 @@ function getGamesByPlayer(playerName) {
     };
   });
 }
+
 
 function serializeGame(game) {
   const headers = game.headers.map(h => `[${h.name} "${h.value}"]`).join("\n");
