@@ -1,60 +1,70 @@
 const fs = require("fs");
 const parser = require("pgn-parser");
 
-function normalizeName(name) {
-  return name.toLowerCase().replace(",", "").split(" ").filter(Boolean);
-}
-
-function matchesPlayerName(fullName, searchInput) {
-  const fullNameWords = normalizeName(fullName);
-  const searchWords = normalizeName(searchInput);
-
-  return searchWords.every(word => fullNameWords.some(n => n.includes(word)));
+function matchesPlayerName(fullName, search) {
+  const normalize = str =>
+    str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const fullTokens = normalize(fullName).split(/[\s,]+/);
+  const searchTokens = normalize(search).split(/[\s,]+/);
+  return searchTokens.every(token => fullTokens.includes(token));
 }
 
 function getGamesByPlayer(playerName) {
-  const raw = fs.readFileSync("games.pgn", "utf8");
-  const parsed = parser.parse(raw);
+  let raw;
+  try {
+    raw = fs.readFileSync("games.pgn", "utf8");
+  } catch (err) {
+    console.error("❌ Error al leer el archivo PGN:", err);
+    return [];
+  }
 
-  const filtered = parsed.filter(game => {
-    const headers = game.headers;
-    const white = headers.find(h => h.name === "White")?.value || "";
-    const black = headers.find(h => h.name === "Black")?.value || "";
+  // Divide por bloques que comienzan con [Event
+  const gameBlocks = raw.split(/\n\n(?=\[Event )/);
+  const result = [];
 
-    return (
-      matchesPlayerName(white, playerName) ||
-      matchesPlayerName(black, playerName)
-    );
-  });
+  for (const block of gameBlocks) {
+    try {
+      const parsed = parser.parse(block);
+      if (!parsed || !parsed[0]) continue;
 
-  return filtered.map(game => {
-    const h = game.headers.reduce((acc, { name, value }) => {
-      acc[name] = value;
-      return acc;
-    }, {});
-    return {
-      event: h.Event || "",
-      white: h.White || "",
-      black: h.Black || "",
-      result: h.Result || "",
-      eco: h.ECO || "",
-      plyCount: Number(h.PlyCount) || null,
-      gameId: h.GameId || "",
-      pgn: serializeGame(game)
-    };
-  });
+      const game = parsed[0];
+      const headers = game.headers || [];
+
+      const white = headers.find(h => h.name === "White")?.value || "";
+      const black = headers.find(h => h.name === "Black")?.value || "";
+
+      if (
+        matchesPlayerName(white, playerName) ||
+        matchesPlayerName(black, playerName)
+      ) {
+        const h = headers.reduce((acc, { name, value }) => {
+          acc[name] = value;
+          return acc;
+        }, {});
+        result.push({
+          event: h.Event || "",
+          white: h.White || "",
+          black: h.Black || "",
+          result: h.Result || "",
+          eco: h.ECO || "",
+          plyCount: Number(h.PlyCount) || null,
+          gameId: h.GameId || "",
+          pgn: serializeGame(game),
+        });
+      }
+    } catch (err) {
+      console.warn("⚠️ Partida ignorada por formato inválido");
+    }
+  }
+
+  return result;
 }
-
 
 function serializeGame(game) {
   const headers = game.headers.map(h => `[${h.name} "${h.value}"]`).join("\n");
-
-  const movesArray = game.moves.map(m => m.move);
-
+  const movesArray = game.moves?.map(m => m.move) || [];
   const moves = movesArray.join(" ");
-
-  return `${headers}\n\n${moves}`;
+  return `${headers}\n\n${moves}`.trim();
 }
-
 
 module.exports = { getGamesByPlayer };
