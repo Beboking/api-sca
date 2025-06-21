@@ -9,7 +9,6 @@ function matchesPlayerName(fullName, searchInput) {
   const fullNameWords = normalizeName(fullName);
   const searchWords = normalizeName(searchInput);
 
-  // Verifica que todas las palabras de búsqueda estén en el nombre completo
   return searchWords.every(word => fullNameWords.some(n => n.includes(word)));
 }
 
