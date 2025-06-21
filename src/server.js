@@ -11,7 +11,7 @@ app.get("/games", (req, res) => {
   const player = req.query.player;
 
   if (!player) {
-    return res.status(400).json({ error: "Falta el parámetro ?player=" });
+    return res.status(400).json({ error: "Missing parameter ?player=" });
   }
 
   try {
@@ -19,10 +19,10 @@ app.get("/games", (req, res) => {
     res.json(games);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Error al procesar el archivo PGN" });
+    res.status(500).json({ error: "Error processing PGN file" });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`Server running at http://localhost:${PORT}`);
 });

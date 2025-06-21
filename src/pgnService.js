@@ -14,11 +14,10 @@ function getGamesByPlayer(playerName) {
   try {
     raw = fs.readFileSync("games.pgn", "utf8");
   } catch (err) {
-    console.error("❌ Error al leer el archivo PGN:", err);
+    console.error("Error reading PGN:", err);
     return [];
   }
 
-  // Divide por bloques que comienzan con [Event
   const gameBlocks = raw.split(/\n\n(?=\[Event )/);
   const result = [];
 
@@ -53,7 +52,7 @@ function getGamesByPlayer(playerName) {
         });
       }
     } catch (err) {
-      console.warn("⚠️ Partida ignorada por formato inválido");
+      console.warn("Invalid game");
     }
   }
 
