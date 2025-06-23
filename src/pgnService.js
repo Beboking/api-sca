@@ -1,62 +1,68 @@
 const fs = require("fs");
 const parser = require("pgn-parser");
 
+const PGN_PATH = "games.pgn";
+
+let parsedGames = [];
+
+function normalizeName(str) {
+  return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
 function matchesPlayerName(fullName, search) {
-  const normalize = str =>
-    str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  const fullTokens = normalize(fullName).split(/[\s,]+/);
-  const searchTokens = normalize(search).split(/[\s,]+/);
+  const fullTokens = normalizeName(fullName).split(/[\s,]+/);
+  const searchTokens = normalizeName(search).split(/[\s,]+/);
   return searchTokens.every(token => fullTokens.includes(token));
 }
 
-function getGamesByPlayer(playerName) {
-  let raw;
-  try {
-    raw = fs.readFileSync("games.pgn", "utf8");
-  } catch (err) {
-    console.error("Error reading PGN:", err);
-    return [];
-  }
+function loadGamesToMemory() {
+  const raw = fs.readFileSync(PGN_PATH, "utf8");
+  const blocks = raw.split(/\n(?=\[Event )/); // divide por bloques de partidas
 
-  const gameBlocks = raw.split(/\n\n(?=\[Event )/);
-  const result = [];
+  parsedGames = [];
 
-  for (const block of gameBlocks) {
+  for (const block of blocks) {
     try {
-      const parsed = parser.parse(block);
-      if (!parsed || !parsed[0]) continue;
+      const parsed = parser.parse(block)[0];
+      if (!parsed) continue;
 
-      const game = parsed[0];
-      const headers = game.headers || [];
+      const headers = parsed.headers.reduce((acc, h) => {
+        acc[h.name] = h.value;
+        return acc;
+      }, {});
 
-      const white = headers.find(h => h.name === "White")?.value || "";
-      const black = headers.find(h => h.name === "Black")?.value || "";
-
-      if (
-        matchesPlayerName(white, playerName) ||
-        matchesPlayerName(black, playerName)
-      ) {
-        const h = headers.reduce((acc, { name, value }) => {
-          acc[name] = value;
-          return acc;
-        }, {});
-        result.push({
-          event: h.Event || "",
-          white: h.White || "",
-          black: h.Black || "",
-          result: h.Result || "",
-          eco: h.ECO || "",
-          plyCount: Number(h.PlyCount) || null,
-          gameId: h.GameId || "",
-          pgn: serializeGame(game),
-        });
-      }
-    } catch (err) {
-      console.warn("Invalid game");
+      parsedGames.push({
+        headers,
+        game: parsed,
+      });
+    } catch (e) {
+      console.warn("❌ Invalid game skipped.");
     }
   }
 
-  return result;
+  console.log(`✅ Loaded ${parsedGames.length} games into memory.`);
+}
+
+function getGamesByPlayer(playerName) {
+  return parsedGames
+    .filter(({ headers }) => {
+      const white = headers.White || "";
+      const black = headers.Black || "";
+      return (
+        matchesPlayerName(white, playerName) ||
+        matchesPlayerName(black, playerName)
+      );
+    })
+    .map(({ headers, game }) => ({
+      event: headers.Event || "",
+      white: headers.White || "",
+      black: headers.Black || "",
+      result: headers.Result || "",
+      eco: headers.ECO || "",
+      plyCount: Number(headers.PlyCount) || null,
+      gameId: headers.GameId || "",
+      pgn: serializeGame(game),
+    }));
 }
 
 function serializeGame(game) {
@@ -66,4 +72,8 @@ function serializeGame(game) {
   return `${headers}\n\n${moves}`.trim();
 }
 
-module.exports = { getGamesByPlayer };
+// Exporta la función para inicializar al iniciar el servidor
+module.exports = {
+  loadGamesToMemory,
+  getGamesByPlayer,
+};

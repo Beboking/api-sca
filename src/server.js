@@ -1,28 +1,31 @@
 const express = require("express");
 const cors = require("cors");
-const { getGamesByPlayer } = require("./pgnService");
+const { getGamesByPlayer, loadGamesToMemory } = require("./pgnService");
 
 const app = express();
 app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
+// ✅ Cargar partidas al arrancar
+loadGamesToMemory();
+
 app.get("/games", (req, res) => {
   const player = req.query.player;
 
   if (!player) {
-    return res.status(400).json({ error: "Missing parameter ?player=" });
+    return res.status(400).json({ error: "Missing ?player= parameter" });
   }
 
   try {
     const games = getGamesByPlayer(player);
     res.json(games);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Error processing PGN file" });
+    console.error("❌ Error getting games:", error);
+    res.status(500).json({ error: "Failed to load games." });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
