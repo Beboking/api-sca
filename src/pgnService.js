@@ -1,9 +1,6 @@
 const fs = require("fs");
 const parser = require("pgn-parser");
 
-const PGN_PATH = "games.pgn";
-const INDEX_PATH = "pgn_index.json";
-
 function matchesPlayerName(fullName, search) {
   const normalize = str =>
     str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -12,63 +9,19 @@ function matchesPlayerName(fullName, search) {
   return searchTokens.every(token => fullTokens.includes(token));
 }
 
-// Genera el índice solo si no existe
-function buildIndex() {
-  if (fs.existsSync(INDEX_PATH)) return;
-
-  const raw = fs.readFileSync(PGN_PATH, "utf8");
-  const lines = raw.split("\n");
-  const index = [];
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (line.startsWith("[Event ")) {
-      const startOffset = Buffer.byteLength(lines.slice(0, i).join("\n")) + (i > 0 ? 1 : 0);
-      const blockLines = [];
-
-      while (i < lines.length && lines[i].trim() !== "") {
-        blockLines.push(lines[i++]);
-      }
-
-      while (i < lines.length && !lines[i].startsWith("[Event ")) {
-        blockLines.push(lines[i++]);
-      }
-
-      const block = blockLines.join("\n");
-
-      try {
-        const parsed = parser.parse(block);
-        const headers = parsed[0]?.headers || [];
-        const gameId = headers.find(h => h.name === "GameId")?.value;
-        if (gameId) {
-          index.push({ gameId, offset: startOffset });
-        }
-      } catch {
-        console.warn("Partida inválida ignorada en offset", startOffset);
-      }
-
-      i--;
-    }
+function getGamesByPlayer(playerName) {
+  let raw;
+  try {
+    raw = fs.readFileSync("games.pgn", "utf8");
+  } catch (err) {
+    console.error("Error reading PGN:", err);
+    return [];
   }
 
-  fs.writeFileSync(INDEX_PATH, JSON.stringify(index, null, 2));
-  console.log("Índice PGN creado.");
-}
-
-function getGamesByPlayer(playerName) {
-  buildIndex();
-
-  const index = JSON.parse(fs.readFileSync(INDEX_PATH, "utf8"));
+  const gameBlocks = raw.split(/\n\n(?=\[Event )/);
   const result = [];
 
-  const fd = fs.openSync(PGN_PATH, "r");
-
-  for (const entry of index) {
-    const buffer = Buffer.alloc(8192);
-    fs.readSync(fd, buffer, 0, buffer.length, entry.offset);
-    const chunk = buffer.toString("utf8");
-
-    const block = chunk.split(/\n\n(?=\[Event )/)[0];
+  for (const block of gameBlocks) {
     try {
       const parsed = parser.parse(block);
       if (!parsed || !parsed[0]) continue;
@@ -99,11 +52,10 @@ function getGamesByPlayer(playerName) {
         });
       }
     } catch (err) {
-      console.warn("Error al parsear una partida en offset", entry.offset);
+      console.warn("Invalid game");
     }
   }
 
-  fs.closeSync(fd);
   return result;
 }
 
