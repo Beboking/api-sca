@@ -17,7 +17,7 @@ function matchesPlayerName(fullName, search) {
 
 function loadGamesToMemory() {
   const raw = fs.readFileSync(PGN_PATH, "utf8");
-  const blocks = raw.split(/\n(?=\[Event )/); // divide por bloques de partidas
+  const blocks = raw.split(/\n(?=\[Event )/); 
 
   parsedGames = [];
 
@@ -40,7 +40,6 @@ function loadGamesToMemory() {
     }
   }
 
-  console.log(`✅ Loaded ${parsedGames.length} games into memory.`);
 }
 
 function getGamesByPlayer(playerName) {
@@ -72,7 +71,6 @@ function serializeGame(game) {
   return `${headers}\n\n${moves}`.trim();
 }
 
-// Exporta la función para inicializar al iniciar el servidor
 module.exports = {
   loadGamesToMemory,
   getGamesByPlayer,

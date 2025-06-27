@@ -7,7 +7,6 @@ app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
-// ✅ Cargar partidas al arrancar
 loadGamesToMemory();
 
 app.get("/games", (req, res) => {
