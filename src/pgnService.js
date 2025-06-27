@@ -36,7 +36,7 @@ function loadGamesToMemory() {
         game: parsed,
       });
     } catch (e) {
-      console.warn("❌ Invalid game skipped.");
+      console.warn("Invalid game skipped.");
     }
   }
 
