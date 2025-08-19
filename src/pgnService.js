@@ -1,7 +1,31 @@
 const fs = require("fs");
 const parser = require("pgn-parser");
+const path = require("path");
 
-const PGN_PATH = "games.pgn";
+// Try multiple possible paths for the PGN file
+const POSSIBLE_PGN_PATHS = [
+  "games.pgn",
+  "./games.pgn",
+  path.join(__dirname, "../games.pgn"),
+  "/Users/sergiopacheco/Desktop/api-SCA/games.pgn",
+  process.env.PGN_PATH || "games.pgn"
+];
+
+function findPgnFile() {
+  for (const pgnPath of POSSIBLE_PGN_PATHS) {
+    try {
+      if (fs.existsSync(pgnPath)) {
+        console.log(`Found PGN file at: ${pgnPath}`);
+        return pgnPath;
+      }
+    } catch (err) {
+      // Continue to next path
+    }
+  }
+  throw new Error(`PGN file not found in any of these locations: ${POSSIBLE_PGN_PATHS.join(', ')}`);
+}
+
+const PGN_PATH = findPgnFile();
 
 let parsedGames = [];
 
