@@ -2,7 +2,6 @@ const fs = require("fs");
 const parser = require("pgn-parser");
 const path = require("path");
 
-// Try multiple possible paths for the PGN file
 const POSSIBLE_PGN_PATHS = [
   "games.pgn",
   "./games.pgn",
@@ -19,7 +18,6 @@ function findPgnFile() {
         return pgnPath;
       }
     } catch (err) {
-      // Continue to next path
     }
   }
   throw new Error(`PGN file not found in any of these locations: ${POSSIBLE_PGN_PATHS.join(', ')}`);
