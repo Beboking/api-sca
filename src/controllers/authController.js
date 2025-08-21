@@ -2,7 +2,6 @@ const authService = require('../services/authService');
 const logger = require('../utils/logger');
 
 class AuthController {
-  // Generate a new simple access code (admin only)
   async generateAccessCode(req, res, next) {
     try {
       logger.info('Simple access code generation requested', {
@@ -10,7 +9,6 @@ class AuthController {
         userAgent: req.get('User-Agent')
       });
 
-      // Collect admin information for the access code
       const adminInfo = {
         adminId: req.body?.adminId || 'admin',
         ip: req.ip,
@@ -50,7 +48,6 @@ class AuthController {
     }
   }
 
-  // Validate a simple access code
   async validateAccessCode(req, res, next) {
     try {
       const { access_code } = req.body;
@@ -84,7 +81,6 @@ class AuthController {
     }
   }
 
-  // Get information about the current access code
   async getAccessCodeInfo(req, res, next) {
     try {
       if (!req.auth) {
